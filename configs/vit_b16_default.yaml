@@ -1,0 +1,33 @@
+experiment:
+  name: vit_b16_lens
+  output_dir: outputs/vit_b16_lens
+  seed: 42
+
+data:
+  manifest_path: data/synthetic/manifest.csv
+  image_size: 224
+  batch_size: 8
+  num_workers: 0
+  train_split: train
+  val_split: val
+  test_split: test
+  use_weighted_sampler: true
+
+model:
+  name: vit_b_16
+  image_size: 224
+  pretrained: false
+  dropout: 0.1
+  freeze_backbone: false
+
+training:
+  epochs: 6
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  positive_class_weight: 1.0
+  focal_gamma: 1.5
+  patience: 3
+  device: auto
+  mixed_precision: false
+  calibration: true
+  decision_threshold: 0.5

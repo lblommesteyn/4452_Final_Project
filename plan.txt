@@ -1,0 +1,293 @@
+Automated Strong Gravitational Lens Detection
+via Deep Learning in Large-Scale Sky Surveys
+
+Virain Bawa
+Dexter Luth
+Luke Blommesteyn
+Pratik Gupta
+Justin Zomer
+
+Project Proposal - CS 4452
+
+Abstract
+
+Strong gravitational lensing systems are rare but scientifically valuable phenomena that enable precise
+measurements of dark matter distributions, galaxy mass profiles, and cosmological parameters. Manual
+identification of lens candidates in modern sky surveys is increasingly infeasible because survey volume is
+growing faster than expert review capacity, and the class imbalance is extreme: real lenses are vastly
+outnumbered by ordinary galaxies and look-alike contaminants. This project develops and evaluates deep
+learning models for automated strong lens detection using galaxy imaging data. We compare convolutional
+neural networks (CNNs) against vision transformers (ViTs) under realistic imbalance settings, and we assess
+both discrimination quality and probability calibration. Beyond standard classification metrics, we evaluate
+precision-recall behavior at low false positive rates, measure robustness to image perturbations, and test
+whether a human-in-the-loop (HITL) review stage improves performance on ambiguous candidates. The
+overall goal is to characterize architectural trade-offs between modern transformer-based models and
+established CNN baselines, and to determine whether calibrated automated ranking can support large-scale
+survey pipelines such as Rubin/LSST-era lens searches.
+
+1. Motivation and Problem Statement
+
+Strong lenses are rare, but they are central to several astronomy and cosmology problems:
+
+- mapping dark matter and total mass distributions in galaxies and clusters
+- studying high-redshift source galaxies that are otherwise too faint to observe clearly
+- constraining cosmological parameters through time-delay and population analyses
+
+The core machine learning problem is therefore not only binary classification, but high-confidence ranking
+under severe class imbalance. A useful survey model must produce a short, high-purity candidate list instead
+of simply maximizing accuracy on a balanced benchmark. This project focuses on that operational setting.
+
+2. Research Questions
+
+- How does a ResNet-style CNN compare with a ViT on strong lens detection when both are trained on the
+  same imaging data and evaluated under identical imbalance conditions?
+- Which architecture yields better precision-recall performance at low false positive rates suitable for
+  survey-scale candidate filtering?
+- How well calibrated are the predicted probabilities, and can post-hoc temperature scaling improve their
+  reliability?
+- Does a simple HITL active learning loop improve performance on ambiguous or low-confidence examples?
+- How robust are the trained models to realistic imaging perturbations such as noise, blur, contrast shifts,
+  and small spatial misalignments?
+
+3. Data Strategy
+
+The original plan referenced the LSST Strong Lensing Science Collaboration, Galaxy Zoo, and Bologna Lens
+Factory resources. After checking public access, the most practical public data plan is:
+
+1. Rubin/LSST Strong Lensing Science Collaboration
+   URL: https://sites.google.com/view/lsst-stronglensing
+   Role: scientific context, survey requirements, and lens-finding task framing for Rubin-scale pipelines.
+
+2. Strong Lens Challenge data release
+   URL: https://slchallenge.cbpf.br/public/Strong_Lens_Challenge_Data_Release.pdf
+   Role: primary public benchmark for simulated lens-finding experiments and baseline model comparison.
+
+3. Galaxy Zoo data portal
+   URL: https://data.galaxyzoo.org/index.html
+   Role: large source of real non-lens galaxies and hard negatives for improving realism and reducing
+   overfitting to simulated data.
+
+4. Bologna Lens Factory challenge portal
+   URL: http://metcalf1.difa.unibo.it/blf-portal/gg_challenge.html
+   Role: secondary benchmark or backup positive set if the Strong Lens Challenge data are insufficient.
+
+5. Optional external validation source: Space Warps and related survey lens candidate catalogs
+   Role: small-scale qualitative and HITL-oriented validation on more realistic candidates if time permits.
+
+Proposed dataset construction
+
+- Positive class: simulated or curated lens examples from the Strong Lens Challenge and, if needed, Bologna
+  Lens Factory.
+- Negative class: non-lens galaxies from challenge negatives plus hard negatives from Galaxy Zoo.
+- Validation strategy: maintain train, validation, and test splits with no image leakage, and evaluate both
+  on a balanced benchmark split and on a more realistic imbalanced split such as 1:100 or 1:1000 lens
+  prevalence.
+- External realism check: reserve a small, separate set of real or candidate lenses for qualitative
+  assessment of domain shift.
+
+Preprocessing plan
+
+- Convert all cutouts to a common image size, likely 96 x 96, 128 x 128, or 224 x 224 depending on model.
+- Map available bands into a 3-channel image representation when possible.
+- Apply pixel normalization using either min-max scaling or astrophysics-friendly intensity transforms such as
+  log or asinh scaling.
+- Use astronomy-safe augmentations: rotations, flips, small translations, blur, and noise injection.
+- Track data provenance in a manifest so results can be stratified by source dataset.
+
+4. Methods
+
+4.1 Residual CNN Baseline
+
+The first model is a ResNet-based CNN trained on lens and non-lens galaxy cutouts. The CNN serves as the
+practical baseline because convolutional backbones remain strong on limited-data image classification tasks
+and are cheaper to train than large transformers. We will begin with ResNet-18 or ResNet-34, then tune:
+
+- learning rate and weight decay
+- input resolution
+- focal loss gamma
+- class weighting and weighted sampling
+- augmentation strength
+
+4.2 Vision Transformer
+
+The second model is a patch-based ViT applied to the same standardized cutouts. The ViT tests whether
+global self-attention improves discrimination or candidate ranking in the presence of ring-like and arc-like
+structures distributed across the image. Because transformers can be data-hungry, we will compare:
+
+- training from scratch vs. transfer learning where feasible
+- multiple input resolutions
+- calibration quality relative to the CNN baseline
+- robustness to perturbations and domain shift
+
+4.3 Human-in-the-Loop Refinement
+
+The third component is not a separate backbone but an iterative refinement loop. After an initial model is
+trained, we will rank unlabeled or ambiguous examples by uncertainty or model disagreement. A human
+reviewer then inspects only the highest-value candidates and either corrects labels or confirms predictions.
+The updated labels are incorporated into another training round. This stage is intended to:
+
+- reduce the impact of label noise
+- improve recall on difficult borderline examples
+- improve ranking quality for the final candidate list
+- emulate a realistic survey workflow where experts review only a small filtered subset
+
+5. Training Plan
+
+The implementation will compare the following settings:
+
+- Model family: ResNet vs. ViT
+- Loss function: weighted binary cross-entropy vs. focal loss
+- Sampling strategy: natural class ratio vs. weighted sampler
+- Calibration: raw logits vs. temperature-scaled probabilities
+- HITL: no review loop vs. one or more targeted review rounds
+
+Training details
+
+- Optimizer: AdamW
+- Early stopping on validation average precision
+- Best-model checkpointing
+- Class imbalance handling with weighted sampling and positive-class weighting
+- Repeatable random seeds and fixed manifest splits for fair comparison
+
+6. Evaluation Protocol
+
+The main evaluation goal is not only to classify correctly, but to identify a threshold and ranking strategy
+that is usable in a real survey screening pipeline.
+
+Primary metrics
+
+- AUC-ROC
+- Average precision / area under the precision-recall curve
+- Precision, recall, and F1 at a fixed operating threshold
+- Precision at very low false positive rates such as 1e-2 and 1e-3
+- Recall at top-K ranked candidates
+
+Calibration metrics
+
+- Expected calibration error (ECE)
+- Brier score
+- Reliability diagrams
+- Improvement after temperature scaling
+
+Robustness tests
+
+- additive Gaussian noise
+- blur and PSF-like smoothing
+- brightness and contrast changes
+- small translations and rotations
+- partial band corruption or low signal-to-noise conditions
+
+Ablation plan
+
+- compare performance with and without hard negatives from Galaxy Zoo
+- compare balanced vs. survey-like class prevalence during evaluation
+- compare raw and calibrated probabilities
+- compare single-model uncertainty vs. CNN/ViT disagreement for HITL queue construction
+
+7. Expected Outcomes
+
+We expect the project to produce:
+
+- a reproducible training pipeline for binary lens detection
+- a baseline comparison between ResNet and ViT backbones
+- calibrated probability estimates for candidate ranking
+- an uncertainty-based HITL review queue for ambiguous examples
+- a short discussion of the simulation-to-reality gap and how it affects deployment
+
+Hypotheses
+
+- The ResNet baseline will likely be more stable and efficient on limited training data.
+- The ViT may improve global pattern modeling, but only if enough data or transfer learning is available.
+- Calibration will matter significantly because survey deployment depends on ranking and thresholding rather
+  than raw class labels alone.
+- HITL refinement will improve precision on difficult examples without requiring full manual review.
+
+8. Risks and Mitigation
+
+Risk: Domain shift between simulated lenses and real survey images.
+Mitigation: Mix simulated positives with real non-lens negatives, report source-specific metrics, and include
+an external validation set where possible.
+
+Risk: Extreme class imbalance makes naive accuracy misleading.
+Mitigation: Emphasize precision-recall metrics, low-FPR operating points, and calibrated ranking.
+
+Risk: Limited compute budget for transformer experiments.
+Mitigation: Use small backbones first, keep image sizes modest, and prioritize one well-tuned ViT baseline
+over many under-trained variants.
+
+Risk: Label noise or ambiguous negatives.
+Mitigation: Use HITL review rounds, uncertainty sampling, and careful error analysis of false positives.
+
+9. Deliverables
+
+- code for data preprocessing, training, evaluation, and review-queue generation
+- a cleaned manifest describing train, validation, and test splits
+- trained CNN and ViT checkpoints
+- comparison plots and tables for discrimination, calibration, and robustness
+- a final report and presentation summarizing findings and limitations
+
+10. Timeline
+
+Assuming a six-week project window:
+
+Week 1
+- verify data access, finalize dataset mix, and build the manifest
+- review core lens-detection literature and establish baseline metrics
+
+Week 2
+- implement preprocessing pipeline and train the first ResNet baseline
+- validate class balancing and metric reporting
+
+Week 3
+- tune the CNN baseline and run the first robustness experiments
+- establish a reproducible experiment tracking setup
+
+Week 4
+- implement and train the ViT baseline
+- compare training stability, compute cost, and ranking performance
+
+Week 5
+- apply calibration and generate reliability analyses
+- run the first HITL refinement round on uncertain examples
+
+Week 6
+- finalize ablations, figures, error analysis, and written report
+- prepare final presentation and summarize architectural trade-offs
+
+11. Implementation Note
+
+The accompanying repository scaffold implements this project structure directly:
+
+- manifest-based data loading for astronomy cutouts
+- `resnet18` and `vit_b_16` model options
+- training and evaluation scripts
+- temperature scaling for probability calibration
+- a simple HITL queue generator
+- a synthetic data generator for local testing before real survey data are added
+
+12. References
+
+Metcalf, R. B., et al. "The Strong Gravitational Lens Finding Challenge." Astronomy and Astrophysics, 2019.
+https://www.aanda.org/articles/aa/full_html/2019/07/aa35436-19/aa35436-19.html
+
+Thuruthipilly, H., et al. "Finding Strong Gravitational Lenses Through Self-Attention." Astronomy and
+Astrophysics, 2022.
+https://www.aanda.org/articles/aa/full_html/2022/08/aa42463-21/aa42463-21.html
+
+Galaxy Zoo Data Portal.
+https://data.galaxyzoo.org/index.html
+
+Rubin/LSST Strong Lensing Science Collaboration.
+https://sites.google.com/view/lsst-stronglensing
+
+Strong Lens Challenge Data Release.
+https://slchallenge.cbpf.br/public/Strong_Lens_Challenge_Data_Release.pdf
+
+Guo, C., Pleiss, G., Sun, Y., and Weinberger, K. Q. "On Calibration of Modern Neural Networks." ICML, 2017.
+https://proceedings.mlr.press/v70/guo17a.html
+
+Dosovitskiy, A., et al. "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale."
+https://arxiv.org/abs/2010.11929
+
+He, K., Zhang, X., Ren, S., and Sun, J. "Deep Residual Learning for Image Recognition."
+https://arxiv.org/abs/1512.03385

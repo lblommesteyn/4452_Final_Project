@@ -1,0 +1,33 @@
+experiment:
+  name: vit_b16_real_castles_gzh
+  output_dir: outputs/vit_b16_real_castles_gzh
+  seed: 42
+
+data:
+  manifest_path: data/real_castles_gzh/manifest.csv
+  image_size: 224
+  batch_size: 4
+  num_workers: 0
+  train_split: train
+  val_split: val
+  test_split: test
+  use_weighted_sampler: true
+
+model:
+  name: vit_b_16
+  image_size: 224
+  pretrained: true
+  dropout: 0.2
+  freeze_backbone: true
+
+training:
+  epochs: 4
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  positive_class_weight: 1.0
+  focal_gamma: 1.0
+  patience: 2
+  device: auto
+  mixed_precision: false
+  calibration: true
+  decision_threshold: 0.5
