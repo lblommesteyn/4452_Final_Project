@@ -17,11 +17,39 @@ def main() -> None:
     parser.add_argument("--config", required=True, help="Path to a YAML experiment config.")
     parser.add_argument("--checkpoint", required=True, help="Path to a saved .pt checkpoint.")
     parser.add_argument("--split", default="test", choices=["train", "val", "test"])
+    parser.add_argument("--perturbations", nargs="+", default=["clean"], help="List of perturbations to evaluate. Options: clean, noise, blur, contrast, shift.",)
     args = parser.parse_args()
 
     config = load_config(args.config)
-    summary = evaluate_checkpoint(config, args.checkpoint, split=args.split)
-    print(json.dumps(summary, indent=2))
+
+    perturbation_settings = {
+        "clean": {},
+        "noise": {"std": 0.05},
+        "blur": {"kernel_size": 3},
+        "contrast": {"factor": 1.2},
+        "shift": {"shift_x": 2, "shift_y": 2},
+    }
+
+
+    summaries = []
+    for perturbation in args.perturbations:
+        perturbation = perturbation.lower().strip()
+        if perturbation not in perturbation_settings:
+            raise ValueError(
+                f"Unknown perturbation '{perturbation}'. "
+                f"Valid options: {sorted(perturbation_settings.keys())}"
+            )
+
+        summary = evaluate_checkpoint(
+            config,
+            args.checkpoint,
+            split=args.split,
+            perturbation=None if perturbation == "clean" else perturbation,
+            perturbation_kwargs=perturbation_settings[perturbation],
+        )
+        summaries.append(summary)
+
+    print(json.dumps(summaries, indent=2))
 
 
 if __name__ == "__main__":
