@@ -5,12 +5,18 @@ import shutil
 import sys
 import unittest
 from pathlib import Path
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from lensing.active_learning import build_hitl_queue
 from lensing.config import DataConfig, ExperimentConfig, ModelConfig, TrainingConfig
+from lensing.figures import (
+    format_low_fpr_table,
+    plot_pr_curve,
+    plot_reliability_diagram,
+)
 from lensing.synthetic import create_synthetic_dataset
 from lensing.training import evaluate_checkpoint, run_training
 
@@ -86,6 +92,57 @@ class SmokeTest(unittest.TestCase):
         build_hitl_queue(predictions_path=predictions_path, output_path=queue_path, top_k=3)
         self.assertTrue(queue_path.exists())
 
+    def test_figures_smoke(self) -> None:
+        rng = np.random.default_rng(0)
+        n = 40
+        logits = rng.normal(0.0, 2.0, size=n).astype(np.float32)
+        targets = np.array([1] * (n // 2) + [0] * (n // 2), dtype=np.float32)
+        temperature = 1.5
+
+        results = {
+            "ModelA": {
+                "logits": logits,
+                "targets": targets,
+                "temperature": temperature,
+                "metrics": {
+                    "precision_at_fpr_1e-2": 0.8,
+                    "precision_at_fpr_1e-3": 0.6,
+                    "recall_at_top_10": 0.9,
+                    "recall_at_top_25": 1.0,
+                },
+            },
+            "ModelB": {
+                "logits": rng.normal(0.0, 1.5, size=n).astype(np.float32),
+                "targets": targets,
+                "temperature": None,
+                "metrics": {
+                    "precision_at_fpr_1e-2": None,
+                    "precision_at_fpr_1e-3": None,
+                    "recall_at_top_10": None,
+                    "recall_at_top_25": None,
+                },
+            },
+        }
+
+        figures_dir = self.test_root / "figures"
+        pr_path = figures_dir / "pr_curve.png"
+        rel_path = figures_dir / "reliability_diagram.png"
+
+        returned_pr = plot_pr_curve(results, output_path=pr_path)
+        self.assertTrue(pr_path.exists(), "PR curve PNG was not created")
+        self.assertEqual(returned_pr, pr_path)
+
+        returned_rel = plot_reliability_diagram(results, output_path=rel_path, n_bins=5)
+        self.assertTrue(rel_path.exists(), "Reliability diagram PNG was not created")
+        self.assertEqual(returned_rel, rel_path)
+
+        table = format_low_fpr_table(results)
+        self.assertIn("ModelA", table)
+        self.assertIn("ModelB", table)
+        self.assertIn("P@FPR=1%", table)
+        self.assertIn("n/a", table)
+        # ModelA has a valid value
+        self.assertIn("0.8000", table)
 
 if __name__ == "__main__":
     unittest.main()
