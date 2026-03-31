@@ -52,6 +52,12 @@ Run the synthetic smoke test:
 python -m unittest tests.test_smoke
 ```
 
+Run the standard ablation set (ResNet vs. ViT, raw vs. calibrated, and imbalance/loss handling variants):
+
+```powershell
+python scripts/run_ablation.py
+```
+
 ## Real-data workflow
 
 Build the real-image dataset used in the analysis:

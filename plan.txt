@@ -179,6 +179,7 @@ Robustness tests
 
 Ablation plan
 
+- Run a small ablation set covering ResNet vs. ViT, raw vs. calibrated probabilities, and at least one imbalance/sampler/loss comparison.
 - compare performance with and without hard negatives from Galaxy Zoo
 - compare balanced vs. survey-like class prevalence during evaluation
 - compare raw and calibrated probabilities
