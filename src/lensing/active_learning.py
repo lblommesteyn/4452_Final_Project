@@ -26,19 +26,27 @@ def build_hitl_queue(
     if not rows:
         raise ValueError(f"No predictions found in {predictions_path}")
 
-    probabilities = np.array([float(row["probability"]) for row in rows], dtype=np.float32)
-    scores = binary_entropy(probabilities)
+    probabilities = np.array(
+        [float(row["probability"]) for row in rows], dtype=np.float32
+    )
 
     if comparison_predictions_path is not None:
-        with Path(comparison_predictions_path).open("r", encoding="utf-8", newline="") as handle:
+        with Path(comparison_predictions_path).open(
+            "r", encoding="utf-8", newline=""
+        ) as handle:
             comparison_rows = list(csv.DictReader(handle))
         if len(comparison_rows) != len(rows):
-            raise ValueError("Prediction files must contain the same number of rows for disagreement scoring.")
+            raise ValueError(
+                "Prediction files must contain the same number of rows for disagreement scoring."
+            )
         comparison_probabilities = np.array(
             [float(row["probability"]) for row in comparison_rows],
             dtype=np.float32,
         )
         scores = np.abs(probabilities - comparison_probabilities)
+    else:
+        # if no comparison predictions are provided, use binary entropy as the uncertainty score
+        scores = binary_entropy(probabilities)
 
     order = np.argsort(scores)[::-1][:top_k]
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -51,4 +59,3 @@ def build_hitl_queue(
             row["review_score"] = f"{float(scores[index]):.6f}"
             writer.writerow(row)
     return output_path
-

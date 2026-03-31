@@ -36,11 +36,15 @@ Evaluate a saved checkpoint:
 python scripts/evaluate.py --config configs/resnet18_default.yaml --checkpoint outputs/resnet18_lens/best_model.pt --split test
 ```
 
-Create a HITL review queue from prediction scores:
+Run one full HITL loop round with one command (queue -> relabel merge -> retrain -> before/after report):
 
 ```powershell
-python scripts/build_hitl_queue.py --predictions outputs/resnet18_lens/test_predictions.csv --top-k 25
+python scripts/run_hitl_round.py --config configs/resnet18_real.yaml --checkpoint outputs/resnet18_real_castles_gzh/best_model.pt --predictions outputs/resnet18_real_castles_gzh/test_predictions.csv --review-csv outputs/reviewed_batch_round1.csv --top-k 25 --simulate-hitl-data
 ```
+
+`--similate-hitl-data` is so that we dont need to do the relabeling step everytime (it just flips some labels around)
+
+`--review-csv` should include a path column `path` and a reviewed label column `reviewed_label`
 
 Run the synthetic smoke test:
 
