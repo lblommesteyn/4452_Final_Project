@@ -17,6 +17,7 @@ from lensing.data.datasets import build_dataloaders
 from lensing.metrics import stable_sigmoid, summarize_binary_metrics
 from lensing.models.factory import create_model
 from lensing.utils import ensure_dir, resolve_device, save_json, seed_everything
+from lensing.robustness import apply_perturbation
 
 
 class BinaryFocalLoss(nn.Module):
@@ -46,6 +47,8 @@ def _collect_outputs(
     loader,
     device: torch.device,
     criterion: nn.Module,
+    perturbation: str | None = None,
+    perturbation_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     model.eval()
     logits_list: list[np.ndarray] = []
@@ -55,9 +58,16 @@ def _collect_outputs(
     running_loss = 0.0
     count = 0
 
+    if perturbation_kwargs is None:
+        perturbation_kwargs = {}
+
     with torch.no_grad():
         for batch in loader:
             images, labels = _move_batch(batch, device)
+
+            if perturbation is not None:
+                images = apply_perturbation(images, perturbation, **perturbation_kwargs)
+
             logits = model(images).view(-1)
             loss = criterion(logits, labels)
             batch_size = labels.numel()
@@ -265,6 +275,8 @@ def evaluate_checkpoint(
     config: ExperimentConfig,
     checkpoint_path: str | Path,
     split: str = "test",
+    perturbation: str | None = None,
+    perturbation_kwargs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     checkpoint_path = Path(checkpoint_path)
     device = resolve_device(config.training.device)
@@ -278,7 +290,7 @@ def evaluate_checkpoint(
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
 
-    outputs = _collect_outputs(model, loaders[split], device, criterion)
+    outputs = _collect_outputs(model, loaders[split], device, criterion, perturbation=perturbation, perturbation_kwargs=perturbation_kwargs)
     metrics = summarize_binary_metrics(
         outputs["logits"],
         outputs["targets"],
@@ -298,6 +310,8 @@ def evaluate_checkpoint(
 
     return {
         "split": split,
+        "perturbation": perturbation or "clean",
+        "perturbation_kwargs": perturbation_kwargs or {},
         "metrics": metrics,
         "metrics_calibrated": calibrated_metrics,
         "temperature": temperature,
