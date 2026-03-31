@@ -26,12 +26,33 @@ The held-out test split is intentionally imbalanced at 1:4 lens prevalence.
 | ResNet18 | 0.0428 | 0.1351 | 0.0004 | 0.0246 | 0.0000 |
 | ViT-B/16 | 0.0010 | 0.2461 | 0.0000 | 0.0634 | 0.0000 |
 
+## Low-FPR Operating Points
+
+| Model | P@FPR=1% | P@FPR=0.1% | Recall@Top-10 | Recall@Top-25 |
+|---|---:|---:|---:|---:|
+| ResNet18 | 1.0000 | 1.0000 | 0.4167 | 1.0000 |
+| ViT-B/16 | 1.0000 | 1.0000 | 0.4167 | 1.0000 |
+
+> **Note:** With a perfectly separable test set all values are 1.0.
+> These columns become meaningful once harder negatives are included.
+
 ## Interpretation
 
 - Both models achieved perfect discrimination on this held-out split.
 - ResNet18 had substantially better raw calibration than ViT-B/16 before temperature scaling.
 - The top uncertain examples are still mostly positive CASTLES systems with raw probabilities around 0.54 to 0.66, which indicates some intra-lens variation remains despite the perfect thresholded metrics.
 - The results are almost certainly inflated by source bias and dataset simplicity: positives are CASTLES lens systems and negatives are Galaxy Zoo: Hubble disk galaxies, which is useful for a proof of pipeline integration but not a realistic estimate of Rubin/LSST survey performance.
+- The PR curve hugs the top-right corner and the reliability diagram shows extreme pre-calibration overconfidence precisely because of this separability; both figures will be more informative on harder data.
+
+## Figures
+
+### Precision-Recall Curve
+
+![PR Curve](figures/pr_curve.png)
+
+### Reliability Diagram
+
+![Reliability Diagram](figures/reliability_diagram.png)
 
 ## HITL Queue Samples
 

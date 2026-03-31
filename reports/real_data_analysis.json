@@ -542,7 +542,8 @@
   "notes": [
     "Both models reached perfect discrimination on the held-out split built from CASTLES positives and Galaxy Zoo: Hubble negatives.",
     "These scores are likely inflated by dataset separability and source bias, so they should not be interpreted as survey-ready performance.",
-    "Raw calibration favored ResNet on this dataset; both models became nearly perfectly calibrated after temperature scaling because the test set is almost linearly separable."
+    "Raw calibration favoured ResNet on this dataset; both models became nearly perfectly calibrated after temperature scaling because the test set is almost linearly separable.",
+    "The PR curve hugs the top-right corner and the reliability diagram shows extreme pre-calibration overconfidence precisely because of this separability; both figures will be more informative on harder data."
   ],
   "sources": {
     "castles": "https://www.cfa.harvard.edu/castles/",
